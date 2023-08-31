@@ -3,10 +3,10 @@ services:
   postgres:
     image: postgres:14
     ports:
-      - "5432:5432"
+      - ${DB_PORT}:5432
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
   zookeeper:
     image: confluentinc/cp-zookeeper:5.5.3
     environment:
@@ -22,4 +22,32 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_JMX_PORT: 9991
     ports:
-      - 9092:9092
+      - ${KAFKA_PORT}:9092
+  transaction-api:
+    container_name: "transaction-api"
+    build:
+      context: ./transaction-api
+      dockerfile: Dockerfile
+    ports:
+      - ${TRANSACTION_API_PORT}:3000
+    depends_on:
+      - postgres
+      - kafka
+      - zookeeper
+    links:
+      - "postgres:database"
+
+  anti-fraud-service:
+    container_name: "anti-fraud-service"
+    build:
+      context: ./anti-fraud-service
+      dockerfile: Dockerfile
+    ports:
+      - ${TRANSACTION_API_PORT}:3000
+    depends_on:
+      - postgres
+      - kafka
+      - zookeeper
+      - transaction-api
+    links:
+      - "postgres:database"

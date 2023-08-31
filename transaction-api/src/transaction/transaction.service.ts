@@ -1,15 +1,21 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Transaction } from './transaction.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createTransactionInput } from './dto/create-transaction.input';
 import { TransactionStatus } from 'src/common/commonTypes';
+import { ClientKafka } from '@nestjs/microservices';
+import {
+  TransactionCreatedEvent,
+  TransactionValidatedEvent,
+} from 'src/transactions.event';
 
 @Injectable()
 export class TransactionService {
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    @Inject('ANTI_FRAUD_SERVICE') private readonly afClient: ClientKafka,
   ) {}
 
   async getTransactions(): Promise<Transaction[]> {
@@ -25,7 +31,23 @@ export class TransactionService {
       transaction.accountExternalIdCredit;
     newTransaction.transferType = transaction.transferType;
     newTransaction.value = transaction.value;
+    const transactionCreated =
+      await this.transactionRepository.save(newTransaction);
+    this.afClient.emit(
+      'transaction-created',
+      new TransactionCreatedEvent(
+        transactionCreated.id,
+        transactionCreated.transferType,
+        transactionCreated.value,
+      ),
+    );
     return await this.transactionRepository.save(newTransaction);
+  }
+
+  async handlerTransactionUpdatedStatus(
+    transaction: TransactionValidatedEvent,
+  ) {
+    console.log('transaction Status Updated', transaction);
   }
 
   async findTransactionById(id: string): Promise<Transaction> {

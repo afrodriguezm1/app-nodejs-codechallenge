@@ -15,7 +15,7 @@ import { join } from 'path';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
+      host: 'localhost', // "change to localhost if running in local without docker"
       port: 5432,
       username: 'postgres',
       password: 'postgres',

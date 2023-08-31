@@ -2,6 +2,7 @@ import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { TransactionService } from './transaction.service';
 import { Transaction } from './transaction.entity';
 import { createTransactionInput } from './dto/create-transaction.input';
+import { EventPattern } from '@nestjs/microservices';
 
 @Resolver()
 export class TransactionResolver {
@@ -27,5 +28,10 @@ export class TransactionResolver {
   @Mutation(() => Transaction)
   deleteTransaction(@Args('id') id: string) {
     return this.transactionService.deleteTransaction(id);
+  }
+
+  @EventPattern('update-transaction')
+  async handlerTransactionUpdated(data: any) {
+    this.transactionService.handlerTransactionUpdatedStatus(data);
   }
 }
