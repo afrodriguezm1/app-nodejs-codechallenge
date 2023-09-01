@@ -23,6 +23,7 @@ services:
       KAFKA_JMX_PORT: 9991
     ports:
       - ${KAFKA_PORT}:9092
+
   transaction-api:
     container_name: "transaction-api"
     build:
@@ -34,6 +35,7 @@ services:
       - postgres
       - kafka
       - zookeeper
+      - anti-fraud-service
     links:
       - "postgres:database"
 
@@ -42,12 +44,9 @@ services:
     build:
       context: ./anti-fraud-service
       dockerfile: Dockerfile
-    ports:
-      - ${TRANSACTION_API_PORT}:3000
     depends_on:
       - postgres
       - kafka
       - zookeeper
-      - transaction-api
     links:
       - "postgres:database"

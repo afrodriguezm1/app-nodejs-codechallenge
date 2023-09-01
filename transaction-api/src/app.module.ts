@@ -6,6 +6,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { join } from 'path';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost', // "change to localhost if running in local without docker"
+      host: 'database', // "change to localhost if running in local without docker"
       port: 5432,
       username: 'postgres',
       password: 'postgres',
@@ -23,6 +24,7 @@ import { join } from 'path';
       synchronize: true,
     }),
     TransactionModule,
+    KafkaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

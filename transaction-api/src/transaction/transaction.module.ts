@@ -4,9 +4,12 @@ import { TransactionResolver } from './transaction.resolver';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Transaction } from './transaction.entity';
 import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ProducerService } from 'src/kafka/producer.service';
+import { KafkaModule } from 'src/kafka/kafka.module';
 
 @Module({
   imports: [
+    KafkaModule,
     TypeOrmModule.forFeature([Transaction]),
     ClientsModule.register([
       {
@@ -24,6 +27,6 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
       },
     ]),
   ],
-  providers: [TransactionService, TransactionResolver],
+  providers: [TransactionService, TransactionResolver, ProducerService],
 })
 export class TransactionModule {}

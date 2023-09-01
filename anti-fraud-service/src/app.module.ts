@@ -6,6 +6,7 @@ import {
   ClientsModuleOptions,
   Transport,
 } from '@nestjs/microservices';
+import { KafkaModule } from './kafka/kafka.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import {
         },
       },
     ]),
+    KafkaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

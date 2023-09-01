@@ -1,21 +1,20 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Transaction } from './transaction.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createTransactionInput } from './dto/create-transaction.input';
 import { TransactionStatus } from 'src/common/commonTypes';
-import { ClientKafka } from '@nestjs/microservices';
-import {
-  TransactionCreatedEvent,
-  TransactionValidatedEvent,
-} from 'src/transactions.event';
+import { TransactionCreatedEvent } from 'src/transactions.event';
+import { ProducerService } from 'src/kafka/producer.service';
+import { ConsumerService } from 'src/kafka/consumer.service';
 
 @Injectable()
-export class TransactionService {
+export class TransactionService implements OnModuleInit {
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
-    @Inject('ANTI_FRAUD_SERVICE') private readonly afClient: ClientKafka,
+    private readonly consumerService: ConsumerService,
+    private readonly producerService: ProducerService,
   ) {}
 
   async getTransactions(): Promise<Transaction[]> {
@@ -33,21 +32,28 @@ export class TransactionService {
     newTransaction.value = transaction.value;
     const transactionCreated =
       await this.transactionRepository.save(newTransaction);
-    this.afClient.emit(
-      'transaction-created',
-      new TransactionCreatedEvent(
-        transactionCreated.id,
-        transactionCreated.transferType,
-        transactionCreated.value,
-      ),
-    );
+    console.log('Sending event, transaction created');
+    await this.producerService.produce({
+      topic: 'transaction-created',
+      messages: [
+        {
+          value: JSON.stringify(
+            new TransactionCreatedEvent(
+              transactionCreated.id,
+              transactionCreated.transferType,
+              transactionCreated.value,
+            ),
+          ),
+        },
+      ],
+    });
     return await this.transactionRepository.save(newTransaction);
   }
 
-  async handlerTransactionUpdatedStatus(
-    transaction: TransactionValidatedEvent,
-  ) {
-    console.log('transaction Status Updated', transaction);
+  async handlerTransactionUpdatedStatus(id: string, status: TransactionStatus) {
+    const transaction = await this.findTransactionById(id);
+    transaction.status = status;
+    await this.transactionRepository.save(transaction);
   }
 
   async findTransactionById(id: string): Promise<Transaction> {
@@ -64,5 +70,26 @@ export class TransactionService {
       .where('id = :id', { id })
       .execute();
     return transaction.id;
+  }
+
+  async onModuleInit() {
+    await this.consumerService.consume(
+      {
+        topics: ['update-transaction'],
+      },
+      {
+        eachMessage: async ({ message }) => {
+          console.log(
+            'Receiving transaction update event',
+            message.value.toString(),
+          );
+          const transaction = JSON.parse(message.value.toString());
+          await this.transactionRepository.update(
+            { id: transaction.id },
+            { status: transaction.status },
+          );
+        },
+      },
+    );
   }
 }
