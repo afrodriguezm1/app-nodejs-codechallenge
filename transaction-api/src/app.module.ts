@@ -16,7 +16,7 @@ import { KafkaModule } from './kafka/kafka.module';
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'database', // "change to localhost if running in local without docker"
+      host: 'localhost', // "change to localhost if running in local without docker"
       port: 5432,
       username: 'postgres',
       password: 'postgres',

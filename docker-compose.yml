@@ -7,10 +7,14 @@ services:
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+    networks:
+      - backend
   zookeeper:
     image: confluentinc/cp-zookeeper:5.5.3
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - backend
   kafka:
     image: confluentinc/cp-enterprise-kafka:5.5.3
     depends_on: [zookeeper]
@@ -23,30 +27,11 @@ services:
       KAFKA_JMX_PORT: 9991
     ports:
       - ${KAFKA_PORT}:9092
+    networks:
+      - backend
 
-  transaction-api:
-    container_name: "transaction-api"
-    build:
-      context: ./transaction-api
-      dockerfile: Dockerfile
-    ports:
-      - ${TRANSACTION_API_PORT}:3000
-    depends_on:
-      - postgres
-      - kafka
-      - zookeeper
-      - anti-fraud-service
-    links:
-      - "postgres:database"
 
-  anti-fraud-service:
-    container_name: "anti-fraud-service"
-    build:
-      context: ./anti-fraud-service
-      dockerfile: Dockerfile
-    depends_on:
-      - postgres
-      - kafka
-      - zookeeper
-    links:
-      - "postgres:database"
+networks:
+  backend:
+    name: my-back-network
+    external: false
